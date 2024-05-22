@@ -1,5 +1,4 @@
 import socket
-import ssl
 import threading
 import sqlite3
 import time
