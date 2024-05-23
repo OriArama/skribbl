@@ -13,26 +13,27 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 from cryptography.fernet import Fernet
 
-# define global variables
-number_of_connected_clients = 0
-is_game_available = True
-connected_players = []
+# Define global variables
+# (These variables are used throughout the code)
+number_of_connected_clients = 0  # Tracks the number of connected clients
+is_game_available = True  # Indicates if the game is available to join
+connected_players = []  # Stores sockets of connected players
 
-start_game_function_call_count = 0
-list_words = words.words
-chosen_word = ""
-initial_time = 10
-remaining_time = initial_time
-count_players_finish_timer = 0
-timer_started = False
-number_of_players_that_guessed_correct = 0
-number_of_player_limits_to_start_the_game = 3
-players_names = []
-players_who_guessed_right = []
+start_game_function_call_count = 0  # Counter for the start_game function calls
+list_words = words.words  # List of words used in the game
+chosen_word = ""  # The word chosen for the game round
+initial_time = 10  # Initial time for the game round
+remaining_time = initial_time  # Remaining time for the game round
+count_players_finish_timer = 0  # Counter for players who finished timer
+timer_started = False  # Flag indicating if the timer has started
+number_of_players_that_guessed_correct = 0  # Number of players who guessed correctly
+number_of_player_limits_to_start_the_game = 3  # Number of players required to start the game
+players_names = []  # List of players' names
+players_who_guessed_right = []  # List of players who guessed correctly
 
-event_restart_timer = threading.Event()
-event_all_players_finish_timer = threading.Event()
-finish_game_thread_event = threading.Event()
+event_restart_timer = threading.Event()  # Event for restarting the timer
+event_all_players_finish_timer = threading.Event()  # Event for when all players finish timer
+finish_game_thread_event = threading.Event()  # Event for finishing the game thread
 
 # Generate a single symmetric key for all clients
 shared_key = Fernet.generate_key()
@@ -40,6 +41,9 @@ cipher_suite = Fernet(shared_key)
 
 
 def refresh():
+    """
+    Reset all global variables to their initial values.
+    """
     global connected_players, start_game_function_call_count, list_words, chosen_word, remaining_time, \
         count_players_finish_timer, timer_started, number_of_players_that_guessed_correct, \
         number_of_player_limits_to_start_the_game, players_names, players_who_guessed_right, is_game_available, \
@@ -59,15 +63,27 @@ def refresh():
     players_who_guessed_right = []
     number_of_connected_clients = 0
 
+    # Clear events
     event_restart_timer.clear()
     event_all_players_finish_timer.clear()
     finish_game_thread_event.clear()
 
+    # Create players table and reset game availability
     create_table()
     is_game_available = True
 
 
 def encrypt_key_with_client_public_key(client_public_key, shared_key):
+    """
+    Encrypt the shared key with the client's public key.
+
+    Args:
+    - client_public_key: Client's public key
+    - shared_key: Shared symmetric key
+
+    Returns:
+    - ciphered_key: Encrypted shared key
+    """
     ciphered_key = client_public_key.encrypt(
         shared_key,
         padding.OAEP(
@@ -80,16 +96,41 @@ def encrypt_key_with_client_public_key(client_public_key, shared_key):
 
 
 def decrypt(encrypted_data):
+    """
+    Decrypt encrypted data.
+
+    Args:
+    - encrypted_data: Data to decrypt
+
+    Returns:
+    - decrypted_data: Decrypted data
+    """
     decrypted_data = cipher_suite.decrypt(encrypted_data).decode('utf-8')
     return decrypted_data
 
 
 def encrypt(data):
+    """
+    Encrypt data.
+
+    Args:
+    - data: Data to encrypt
+
+    Returns:
+    - encrypted_data: Encrypted data
+    """
     encrypted_data = cipher_suite.encrypt(data.encode('utf-8'))
     return encrypted_data
 
 
 def get_first_data(client_socket, client_address):
+    """
+    Handle initial data exchange with the client.
+
+    Args:
+    - client_socket: Client socket
+    - client_address: Client address
+    """
     global remaining_time
     global count_players_finish_timer
     global number_of_connected_clients
@@ -169,6 +210,9 @@ def get_first_data(client_socket, client_address):
 
 
 def set_remaining_time():
+    """
+    Set the remaining time until the game starts and manage the timer.
+    """
     global remaining_time
     global timer_started
 
@@ -183,6 +227,9 @@ def set_remaining_time():
 
 
 def start_game():
+    """
+    Start the game and manage game rounds.
+    """
     global start_game_function_call_count
     global players_names
     global finish_game_thread_event
@@ -261,6 +308,12 @@ def start_game():
 
 
 def get_messages(client_socket):
+     """
+    Receive and process messages from the client.
+
+    Args:
+    - client_socket: Client socket
+    """
     global count_players_finish_timer
     global chosen_word
     global number_of_players_that_guessed_correct
@@ -370,6 +423,13 @@ def get_messages(client_socket):
 
 
 def send_message_to_all_clients(message, who_not_to_send):
+     """
+    Send a message to all clients except one.
+
+    Args:
+    - message: Message to send
+    - who_not_to_send: Client socket to exclude from recipients
+    """
     for index in range(len(connected_players)):
         try:
             if who_not_to_send != connected_players[index]:
@@ -379,6 +439,12 @@ def send_message_to_all_clients(message, who_not_to_send):
 
 
 def remove_player_when_game(client_socket):
+    """
+    Remove a player from the game when they disconnect.
+
+    Args:
+    - client_socket: Client socket to remove
+    """
     global players_names
     global number_of_connected_clients
     try:
@@ -399,6 +465,12 @@ def remove_player_when_game(client_socket):
 
 
 def remove_player_when_timer(client_socket):
+    """
+    Remove a player from the game when they disconnect during the waiting room.
+
+    Args:
+    - client_socket: Client socket to remove
+    """
     global number_of_connected_clients
     try:
         conn = sqlite3.connect('players.db')
@@ -416,6 +488,9 @@ def remove_player_when_timer(client_socket):
 
 
 def create_table():
+    """
+    Create the 'players' table if it doesn't exist.
+    """
     if os.path.exists('players.db'):
         # Remove the database file
         os.remove('players.db')
@@ -482,6 +557,9 @@ def open_port():
 
 
 def start_server_shutdown_if_no_clients():
+    """
+    Start a timer thread to shut down the server if no clients are connected.
+    """
     global server_socket, number_of_connected_clients
     while True:
 
