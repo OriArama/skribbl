@@ -76,6 +76,11 @@ class player(QtCore.QObject):
         self.handle_gui_first_window()
 
     def handle_gui_first_window(self):
+        """
+        Handle the initial GUI window.
+
+        Sets up the main window, connects UI elements to functions, and displays the window.
+        """
         global MainWindow
         self.gui_first_window.setUpUi(MainWindow)
         self.gui_first_window.retranslateUi(MainWindow)
@@ -90,10 +95,22 @@ class player(QtCore.QObject):
         MainWindow.show()
 
     def check_button_states(self):
+        """
+        Check button states periodically.
+
+        Checks if the monster selection buttons and name input field are enabled.
+        If they are disabled, sets the event to notify that the main window is ready to be closed.
+        """
         if not self.gui_first_window.MonsterButton_1.isEnabled() and not self.gui_first_window.lineEdit.isEnabled():
             self.event_listen_for_server_messages.set()
 
     def handle_waiting_room_window(self):
+        """
+        Handle the waiting room GUI window.
+
+        Sets up the waiting room window, connects UI elements to functions,
+        starts a thread to handle incoming messages, and displays the window.
+        """
         try:
             self.gui_waiting_room = g.WaitingRoomApp()
             self.gui_waiting_room.setUpUi()
@@ -108,6 +125,12 @@ class player(QtCore.QObject):
             print(f"Error: {e}")
 
     def handle_game_window(self):
+        """
+        Handle the game GUI window.
+
+        Sets up the game window, determines the role of the player (drawer or guesser),
+        and connects UI elements to functions accordingly.
+        """
         drawer = ""
         message = decrypt(client_socket.recv(1464))
         client_socket.send(encrypt("thanks"))
@@ -154,44 +177,92 @@ class player(QtCore.QObject):
             self.gui_game.window_closed_signal.connect(lambda: self.close_game(self.gui_game))
 
     def handle_winner_window(self):
+        """
+        Handle the winner window.
+
+        Displays the winner of the game in a separate window.
+        """
         winner = decrypt(client_socket.recv(1464))
         client_socket.send(encrypt("thanks".ljust(1024)))
         self.gui_winner = g.WinnerWindow(winner)
         self.gui_winner.show()
 
     def drawer_disconnected(self):
+        """
+        Handle the case when the drawer disconnects.
+
+        Closes the game window, notifies the server, and terminates the client.
+        """
         self.gui_game.close()
         client_socket.send(encrypt("Drawer_disconnected"))
         client_socket.close()
         quit()
 
     def guesser_disconnected(self):
+        """
+        Handle the case when the guesser disconnects.
+
+        Closes the game window, notifies the server, and terminates the client.
+        """
         self.gui_game.close()
         client_socket.send(encrypt("Guesser_disconnected"))
         client_socket.close()
         quit()
 
     def no_more_players(self):
+        """
+        Handle the case when there are no more players in the game except for one.
+
+        Displays a message indicating that the game is over.
+        """
         self.gui_game_over = g.GameOverWindow()
         self.gui_game_over.show()
 
     def start_game_timer(self):
+        """
+        Start the game timer.
+
+        Displays the timer in the game window and enables the disconnect button.
+        """
         self.gui_game.disconnect_button.show()
         self.gui_game.timer_label.show()
         self.gui_game.start_timer()
 
     def send_word(self, word):
+        """
+        Send the chosen word to the server.
+
+        Args:
+            word (str): The word chosen by the player.
+
+        Sends the chosen word to the server for the drawing round.
+        """
         client_socket.send(encrypt(("Word," + word)))
         self.gui_words.close()
 
     def clear_painting_message(self):
+        """
+        Send a message to clear the drawing on the canvas.
+
+        Sends a message to the server to clear the drawing canvas.
+        """
         client_socket.send(encrypt("Clear painting"))
 
     def send_finish(self):
+        """
+        Send a message to indicate the end of the game round.
+
+        Sends a message to the server to indicate that the game round has finished.
+        """
         self.is_thread_running = False
         client_socket.send(encrypt("Game round finish"))
 
     def current_results(self):
+        """
+        Display the current game results.
+
+        Displays the current game results including player scores in a separate window.
+        """
         self.gui_current_results = g.CurrentResults(self.game_word, self.number_of_players)
         for i in range(self.number_of_players):
             row = self.players_order[i].split(",")
@@ -205,6 +276,11 @@ class player(QtCore.QObject):
         self.gui_current_results.window_closed_signal.connect(self.starting_another_round)
 
     def starting_another_round(self):
+        """
+        Prepare for starting another round of the game.
+
+        Sends a message to the server to start another round of the game.
+        """
         client_socket.send(encrypt("Finish current results"))
         self.game_word = ""
         self.players_order = []
@@ -220,6 +296,11 @@ class player(QtCore.QObject):
             self.handle_game_window()
 
     def drawing_change(self):
+        """
+        Continuously monitor and send drawing updates.
+
+        Monitors for changes in the drawing canvas and sends updates to the server.
+        """
         last_pos1 = None
         new_pos1 = None
 
@@ -248,6 +329,17 @@ class player(QtCore.QObject):
                 pass
 
     def normalize_coordinates(self, sender_size, start_pos, end_pos):
+        """
+        Normalize coordinates relative to the sender's size.
+
+        Args:
+            sender_size (QSize): Size of the sender widget.
+            start_pos (QPoint): Starting position of the drawing.
+            end_pos (QPoint): Ending position of the drawing.
+
+        Returns:
+            Tuple[float, float, float, float]: Normalized coordinates (start_x, start_y, end_x, end_y).
+        """
         sender_width, sender_height = sender_size.width(), sender_size.height()
 
         # Ensure the coordinates are integers
@@ -259,6 +351,17 @@ class player(QtCore.QObject):
         return start_x, start_y, end_x, end_y
 
     def send_drawing_update(self, start_pos, end_pos, width, color):
+        """
+        Send drawing updates to the server.
+
+        Args:
+            start_pos (QPoint): Starting position of the drawing.
+            end_pos (QPoint): Ending position of the drawing.
+            width (int): Width of the drawing.
+            color (str): Color of the drawing.
+
+        Sends drawing updates to the server for synchronization.
+        """
         # Create a message containing drawing updates (start_pos, end_pos, width)
         start_x, start_y, end_x, end_y = self.normalize_coordinates(self.gui_game.big_label.size(), start_pos, end_pos)
         message = f"DRAWING|{start_x},{start_y}|{end_x},{end_y}|{width}|{color}|"
@@ -267,6 +370,14 @@ class player(QtCore.QObject):
         client_socket.send(encrypt(message))
 
     def handle_messages(self, window):
+        """
+        Continuously handle incoming messages from the server.
+
+        Args:
+            window (QObject): The window instance to handle messages for.
+
+        Monitors for incoming messages from the server and handles them accordingly.
+        """
         while True:
             try:
                 data = decrypt(client_socket.recv(1464))
@@ -373,6 +484,9 @@ class player(QtCore.QObject):
                 self.update_gui_chat_text_signal.emit(html_content, window, state)
 
     def close_game(self, window):
+        """
+        Close game window GUI.
+        """
         if not self.already_close_game:
             self.already_close_game = True
             if window.isVisible():
@@ -382,12 +496,26 @@ class player(QtCore.QObject):
             self.current_results()
 
     def clear_painting(self):
+        """
+        Clear the board
+        """
         self.gui_game.big_label.clear()
 
     # Example of denormalizing coordinates on the receiver side
     def denormalize_coordinates(self, receiver_size, normalized_start_pos_x, normalized_start_pos_y,
                                 normalized_end_pos_x,
                                 normalized_end_pos_y):
+        """
+        Denormalize coordinates relative to the receiver's size.
+
+        Args:
+            receiver_size (QSize): Size of the receiver widget.
+            denormalized_start_pos (QPoint): Starting position of the drawing.
+            denormalized_end_pos (QPoint): Ending position of the drawing.
+
+        Returns:
+            Denormalized coordinates
+        """
         receiver_width, receiver_height = receiver_size.width(), receiver_size.height()
         denormalized_start_pos = PyQt6.QtCore.QPoint(int(normalized_start_pos_x * receiver_width),
                                                      int(normalized_start_pos_y * receiver_height))
@@ -398,6 +526,9 @@ class player(QtCore.QObject):
     # Example of updating drawing with denormalized coordinates
     def update_drawing(self, normalized_start_pos_x, normalized_start_pos_y, normalized_end_pos_x, normalized_end_pos_y,
                        width, color):
+        """
+        Update changes in the drawing
+        """
         receiver_size = self.gui_game.big_label.size()  # Get the size of the receiver's screen
         denormalized_start_pos, denormalized_end_pos = self.denormalize_coordinates(receiver_size,
                                                                                     normalized_start_pos_x,
@@ -407,16 +538,25 @@ class player(QtCore.QObject):
         self.gui_game.big_label.create_line(denormalized_start_pos, denormalized_end_pos, width, color)
 
     def update_players(self, html_content, window):
+        """
+        Update new player
+        """
         # Update the GUI element (e.g., players_names QTextEdit) with the provided HTML content
         window.players_names.append(html_content)
         window.players_names.update()
 
     def update_chat_text(self, html_content, window, state):
+        """
+        Update new chat text to the window.
+        """
         window.chat_text.append(html_content)
         if state == "disable":
             window.chat_input.setEnabled(False)
 
     def remove_player(self, name, window):
+        """
+        Remove player from the waiting room window.
+        """
         # Iterate through the lines in self.players_names and remove the matching line
         cursor = self.gui_waiting_room.players_names.textCursor()
         cursor.movePosition(QtGui.QTextCursor.MoveOperation.Start)
@@ -436,6 +576,9 @@ class player(QtCore.QObject):
         self.gui_waiting_room.players_names.setTextCursor(cursor)
 
     def open_timer_gui(self):
+        """
+        Open the CountDownClock window GUI 
+        """
         self.timer_thread = threading.Thread(target=self.check_number_of_players, daemon=True)
         self.timer_thread.daemon = True
         self.timer_thread.start()
@@ -445,12 +588,18 @@ class player(QtCore.QObject):
         self.clock.custom_exec()
 
     def terminate_timer_thread(self):
+        """
+        When the CountDownClock ends it closes the check_number_of_players function and close the waiting room window
+        """
         self.event_number_players.set()  # Set the event to terminate the thread
         if self.number_of_players >= self.number_of_player_limits_to_start_the_game:
             client_socket.send(encrypt("Timer finished"))
             self.gui_waiting_room.close()
 
     def check_number_of_players(self):
+        """
+        If the number of player is less than the limits when the timer is working it emits a signal to close the timer
+        """
         while not self.event_number_players.is_set():
             if self.number_of_players < self.number_of_player_limits_to_start_the_game:
                 self.event_number_players.set()
@@ -458,6 +607,9 @@ class player(QtCore.QObject):
             time.sleep(1)  # Adjust the sleep duration as needed
 
     def close_timer(self):
+        """
+        Explain that someone left and there are less player than the minimum to start a game. Then, close the CountDownClock window.
+        """
         self.clock.label_below.hide()
         self.clock.finish.hide()
         self.clock.label_above.setText(
@@ -467,6 +619,9 @@ class player(QtCore.QObject):
         close_timer.start(2000)  # Close the window after 2 seconds
 
     def disconnect_from_server(self):
+        """
+        Send a message to the server that the client wants to quit while he is in the waiting room and disconnect.
+        """
         client_socket.send(encrypt("quit"))
         # client_socket.shutdown(socket.SHUT_RDWR)
         client_socket.close()
@@ -480,12 +635,18 @@ class player(QtCore.QObject):
         quit()
 
     def send_messages(self, window):
+        """
+        Send messages to chat
+        """
         client_socket.send(encrypt("message_chat: " + window.get_message()))
         if window == self.gui_game:
             if self.gui_game.timer_label.isVisible():
                 client_socket.send(encrypt((str(self.gui_game.timer_value))))
 
     def listen_for_server_messages(self):
+        """
+        Wait for the server to allow the client to close the first window and open the waiting room window
+        """
         self.event_listen_for_server_messages.wait()
         while True:
             try:
@@ -501,6 +662,9 @@ class player(QtCore.QObject):
                 print(f"Error in listen_for_server_messages: {e}")
 
     def disconnect_first_window(self):
+        """
+        Send a message to the server that the client wants to quit while he is in the first window and disconnect.
+        """
         self.listening = False
         stay = self.gui_first_window.get_stay()
         if not stay:
@@ -512,6 +676,9 @@ class player(QtCore.QObject):
             quit()
 
     def send_name(self):
+        """
+        Send the name to the server
+        """
         self.name = self.gui_first_window.lineEdit.text()
         if self.name:
             try:
@@ -531,6 +698,9 @@ class player(QtCore.QObject):
                 print(f"Error sending name: {e}")
 
     def send_monster(self):
+        """
+        Send the chosen monster to the server
+        """
         self.monster = self.gui_first_window.get_monster()
         if self.monster:
             try:
