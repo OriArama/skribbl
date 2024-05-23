@@ -246,7 +246,6 @@ def start_game():
     players_names = cursor.fetchall()
     for i in range(2):
         for name in players_names:
-            print(players_names)
             if i == 1 and name == players_names[len(players_names) - 1]:
                 last_round = True
             thread3 = None
@@ -275,14 +274,12 @@ def start_game():
                 finish_game_thread_event.clear()
             connected_players.append(connected_players.pop(0))
             if len(players_names) == 1:
-                print(1111)
                 break
             if not last_round:
                 for j in range(len(connected_players)):
                     connected_players[j].send(encrypt("continue"))
                     connected_players[j].recv(1464)
         if len(players_names) == 1:
-            print(1122)
             break
     if len(players_names) == 1:
         connected_players[0].send(encrypt("The last player"))
@@ -308,7 +305,7 @@ def start_game():
 
 
 def get_messages(client_socket):
-     """
+    """
     Receive and process messages from the client.
 
     Args:
@@ -324,7 +321,6 @@ def get_messages(client_socket):
             message = decrypt(client_socket.recv(1464))
         except:
             finish_game_thread_event.wait()
-            print("Break")
             break
         conn = sqlite3.connect('players.db')
         cursor = conn.cursor()
@@ -423,7 +419,7 @@ def get_messages(client_socket):
 
 
 def send_message_to_all_clients(message, who_not_to_send):
-     """
+    """
     Send a message to all clients except one.
 
     Args:
