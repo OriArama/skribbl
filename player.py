@@ -1,4 +1,5 @@
 import subprocess
+import warnings
 import socket
 import os
 import time
@@ -29,42 +30,42 @@ def encrypt(data):
 
 def decrypt(encrypted_data):
     decrypted_data = cipher_suite.decrypt(encrypted_data).decode('utf-8')
-    turn decrypted_data
+    return decrypted_data
 
 
-class player(QtCo.QObject):
-    close_first_window_signal = QtCo.pyqtSignal()
-    open_waiting_room_signal = QtCo.pyqtSignal()
-    update_gui_players_names_signal = QtCo.pyqtSignal(str, object)  # Define a signal for updating the GUI
-    update_gui_chat_text_signal = QtCo.pyqtSignal(str, object, str)
-    move_player_signal = QtCo.pyqtSignal(str, object)
-    turn_on_timer_signal = QtCo.pyqtSignal()
-    close_timer_signal = QtCo.pyqtSignal()
-    open_game_signal = QtCo.pyqtSignal()
-    update_drawing_signal = QtCo.pyqtSignal(float, float, float, float, int, str)
-    clear_painting_signal = QtCo.pyqtSignal()
-    start_game_timer_signal = QtCo.pyqtSignal()
-    close_game_signal = QtCo.pyqtSignal(object)
+class player(QtCore.QObject):
+    close_first_window_signal = QtCore.pyqtSignal()
+    open_waiting_room_signal = QtCore.pyqtSignal()
+    update_gui_players_names_signal = QtCore.pyqtSignal(str, object)  # Define a signal for updating the GUI
+    update_gui_chat_text_signal = QtCore.pyqtSignal(str, object, str)
+    remove_player_signal = QtCore.pyqtSignal(str, object)
+    turn_on_timer_signal = QtCore.pyqtSignal()
+    close_timer_signal = QtCore.pyqtSignal()
+    open_game_signal = QtCore.pyqtSignal()
+    update_drawing_signal = QtCore.pyqtSignal(float, float, float, float, int, str)
+    clear_painting_signal = QtCore.pyqtSignal()
+    start_game_timer_signal = QtCore.pyqtSignal()
+    close_game_signal = QtCore.pyqtSignal(object)
     number_of_players = 0
     game_word = ""
     players_order = []
     number_of_player_limits_to_start_the_game = 3
-    alady_close_game = False
+    already_close_game = False
 
     def __init__(self):
         super().__init__()
-        self.is_thad_running = None
-        self.gui_curnt_sults = None
+        self.is_thread_running = None
+        self.gui_current_results = None
         self.name = ""
         self.monster = ""
         self.initial_time = 0
         self.gui_waiting_room = None
         self.gui_game = None
         self.clock = None
-        self.timer = QTimer()  # Cate a QTimer to periodically check button states
+        self.timer = QTimer()  # Create a QTimer to periodically check button states
         self.timer.timeout.connect(self.check_button_states)
         self.timer.start(1000)  # Adjust the timer interval as needed
-        self.event_listen_for_server_messages = thading.Event()
+        self.event_listen_for_server_messages = threading.Event()
         self.event_number_players = threading.Event()
         thread1 = threading.Thread(target=self.listen_for_server_messages, daemon=True)
         thread1.daemon = True
