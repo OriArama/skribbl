@@ -24,28 +24,30 @@ MainWindow = QtWidgets.QMainWindow()
 client_socket_lock = threading.Lock()
 
 def encrypt(data):
+    """Encrypt data using Fernet cipher suite."""
     encrypted_data = cipher_suite.encrypt(data.encode('utf-8'))
     return encrypted_data
 
 
 def decrypt(encrypted_data):
+    """Decrypt encrypted data using Fernet cipher suite."""
     decrypted_data = cipher_suite.decrypt(encrypted_data).decode('utf-8')
     return decrypted_data
 
 
 class player(QtCore.QObject):
-    close_first_window_signal = QtCore.pyqtSignal()
-    open_waiting_room_signal = QtCore.pyqtSignal()
-    update_gui_players_names_signal = QtCore.pyqtSignal(str, object)  # Define a signal for updating the GUI
-    update_gui_chat_text_signal = QtCore.pyqtSignal(str, object, str)
-    remove_player_signal = QtCore.pyqtSignal(str, object)
-    turn_on_timer_signal = QtCore.pyqtSignal()
-    close_timer_signal = QtCore.pyqtSignal()
-    open_game_signal = QtCore.pyqtSignal()
-    update_drawing_signal = QtCore.pyqtSignal(float, float, float, float, int, str)
-    clear_painting_signal = QtCore.pyqtSignal()
-    start_game_timer_signal = QtCore.pyqtSignal()
-    close_game_signal = QtCore.pyqtSignal(object)
+    close_first_window_signal = QtCore.pyqtSignal()  # Signal to close the main window.
+    open_waiting_room_signal = QtCore.pyqtSignal()  # Signal to open the waiting room window.
+    update_gui_players_names_signal = QtCore.pyqtSignal(str, object)  # Signal to update GUI with players' names.
+    update_gui_chat_text_signal = QtCore.pyqtSignal(str, object, str)  # Signal to update GUI with chat messages.
+    remove_player_signal = QtCore.pyqtSignal(str, object)  # Signal to remove a player from the GUI. 
+    turn_on_timer_signal = QtCore.pyqtSignal()  # Signal to turn on the timer.
+    close_timer_signal = QtCore.pyqtSignal()  # Signal to close the timer.
+    open_game_signal = QtCore.pyqtSignal()  # Signal to open the game window.
+    update_drawing_signal = QtCore.pyqtSignal(float, float, float, float, int, str)  # Signal to update drawing on the GUI.
+    clear_painting_signal = QtCore.pyqtSignal()  # Signal to clear the drawing on the GUI.
+    start_game_timer_signal = QtCore.pyqtSignal()  # Signal to start the game timer.
+    close_game_signal = QtCore.pyqtSignal(object)  # Signal to close the game.
     number_of_players = 0
     game_word = ""
     players_order = []
