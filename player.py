@@ -187,7 +187,6 @@ class player(QtCore.QObject):
 
     def send_finish(self):
         self.is_thread_running = False
-        print(2)
         client_socket.send(encrypt("Game round finish"))
 
     def current_results(self):
@@ -211,14 +210,11 @@ class player(QtCore.QObject):
         self.already_close_game = False
         is_last_round = decrypt(client_socket.recv(1464))
         client_socket.send(encrypt("thanks"))
-        print(is_last_round)
         if is_last_round == "The last player":
             self.no_more_players()
         elif is_last_round == "show the winner":
-            print("winner")
             self.handle_winner_window()
         else:
-            print("round")
             self.handle_game_window()
 
     def drawing_change(self):
@@ -354,7 +350,6 @@ class player(QtCore.QObject):
             elif data == "Start Timer game":
                 self.start_game_timer_signal.emit()
             elif data.startswith("Game word: "):
-                print("3A")
                 self.game_word = data[11:]
                 message = decrypt(client_socket.recv(1464))
                 self.number_of_players = 0
@@ -363,12 +358,9 @@ class player(QtCore.QObject):
                     self.number_of_players = self.number_of_players + 1
                     client_socket.send(encrypt("thanks"))
                     message = decrypt(client_socket.recv(1464))
-                    print(message)
                 client_socket.send(encrypt("thanks"))
-                print("3")
                 break
             elif data == "Finish game round":
-                print("1")
                 self.close_game_signal.emit(window)
 
             elif data.startswith("Left"):
@@ -385,7 +377,6 @@ class player(QtCore.QObject):
                 window.close()
             self.send_finish()
             self.thread3.join()
-            print("4")
             self.current_results()
 
     def clear_painting(self):
