@@ -167,7 +167,6 @@ def get_first_data(client_socket, client_address):
             elif data.startswith("monster: "):
                 monster = data[9:]
             elif data == "quit":
-                print("Client requested to quit.")
                 number_of_connected_clients = number_of_connected_clients - 1
                 client_socket.close()
                 break  # If the client sends a "quit" message, break out of the loop
@@ -182,7 +181,6 @@ def get_first_data(client_socket, client_address):
                 client_socket.recv(1464)
                 break  # If name and monster data are received, break out of the loop
         except Exception as e:
-            print(f"An error occurred: {e}")
             number_of_connected_clients = number_of_connected_clients - 1
             client_socket.close()
             break
@@ -214,7 +212,6 @@ def get_first_data(client_socket, client_address):
         try:
             get_messages(client_socket)
         except Exception as e:
-            print(e)
             message_to_send = f"remove ,{name},{monster}"
             send_message_to_all_clients(message_to_send, client_socket)
             remove_player_when_timer(client_socket)
@@ -476,7 +473,7 @@ def send_message_to_all_clients(message, who_not_to_send):
             if who_not_to_send != connected_players[index]:
                 connected_players[index].send(encrypt(message))
         except Exception as e:
-            print(f"An error occurred while broadcasting to a client: {e}")
+            pass
 
 
 def remove_player_when_game(client_socket):

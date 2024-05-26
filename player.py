@@ -68,6 +68,7 @@ class player(QtCore.QObject):
         self.gui_waiting_room = None
         self.gui_game = None
         self.clock = None
+        self.gui_server_shut_down = None
         self.timer = QTimer()  # Create a QTimer to periodically check button states
         self.timer.timeout.connect(self.check_button_states)
         self.timer.start(1000)  # Adjust the timer interval as needed
@@ -97,6 +98,7 @@ class player(QtCore.QObject):
         self.gui_first_window.SendButton.clicked.connect(self.send_name)
         self.gui_first_window.DisconnectButton.clicked.connect(self.disconnect_first_window)
         MainWindow.show()
+
 
     def check_button_states(self):
         """
@@ -136,11 +138,21 @@ class player(QtCore.QObject):
         and connects UI elements to functions accordingly.
         """
         drawer = ""
-        message = decrypt(client_socket.recv(1464))
-        client_socket.send(encrypt("thanks"))
-        if message == "You are the drawer":
-            words_message = decrypt(client_socket.recv(1464))
+        try:
+            message = decrypt(client_socket.recv(1464))
             client_socket.send(encrypt("thanks"))
+        except ConnectionResetError as cre:
+            self.gui_server_shut_down = g.ServerShutDown()
+            self.gui_server_shut_down.show()
+            self.gui_server_shut_down.windowClosed.connect(quit)
+        if message == "You are the drawer":
+            try:
+                words_message = decrypt(client_socket.recv(1464))
+                client_socket.send(encrypt("thanks"))
+            except ConnectionResetError as cre:
+                self.gui_server_shut_down = g.ServerShutDown()
+                self.gui_server_shut_down.show()
+                self.gui_server_shut_down.windowClosed.connect(quit)
             list_words = words_message.split(',')
             list_words = list_words[1:]
             self.gui_words = g.WordsUi()
@@ -166,8 +178,13 @@ class player(QtCore.QObject):
             thread4.start()
             self.gui_game.window_closed_signal.connect(lambda: self.close_game(self.gui_game))
         elif message == "You are a guesser":
-            drawer = decrypt(client_socket.recv(1464))
-            client_socket.send(encrypt("thanks"))
+            try:
+                drawer = decrypt(client_socket.recv(1464))
+                client_socket.send(encrypt("thanks"))
+            except ConnectionResetError as cre:
+                self.gui_server_shut_down = g.ServerShutDown()
+                self.gui_server_shut_down.show()
+                self.gui_server_shut_down.windowClosed.connect(quit)
             self.gui_game = g.GameUi()
             self.gui_game.timer_value = 60
             self.thread3 = threading.Thread(target=self.handle_messages, args=(self.gui_game,), daemon=True)
@@ -184,6 +201,7 @@ class player(QtCore.QObject):
             self.gui_game.chat_send_button.clicked.connect(lambda: self.send_messages(self.gui_game))
             self.gui_game.disconnect_button.clicked.connect(self.guesser_disconnected)
             self.gui_game.window_closed_signal.connect(lambda: self.close_game(self.gui_game))
+
 
     def handle_winner_window(self):
         """
@@ -203,7 +221,10 @@ class player(QtCore.QObject):
         Closes the game window, notifies the server, and terminates the client.
         """
         self.gui_game.close()
-        client_socket.send(encrypt("Drawer_disconnected"))
+        try:
+            client_socket.send(encrypt("Drawer_disconnected"))
+        except ConnectionResetError as cre:
+            quit()
         client_socket.close()
         quit()
 
@@ -214,7 +235,10 @@ class player(QtCore.QObject):
         Closes the game window, notifies the server, and terminates the client.
         """
         self.gui_game.close()
-        client_socket.send(encrypt("Guesser_disconnected"))
+        try:
+            client_socket.send(encrypt("Guesser_disconnected"))
+        except ConnectionResetError as cre:
+            quit()
         client_socket.close()
         quit()
 
@@ -246,8 +270,14 @@ class player(QtCore.QObject):
 
         Sends the chosen word to the server for the drawing round.
         """
-        self.word_button_clicked = True
-        client_socket.send(encrypt(("Word," + word)))
+        try:
+            self.word_button_clicked = True
+            client_socket.send(encrypt(("Word," + word)))
+        except ConnectionResetError as cre:
+            self.gui_words.close()
+            self.gui_server_shut_down = g.ServerShutDown()
+            self.gui_server_shut_down.show()
+            self.gui_server_shut_down.windowClosed.connect(quit)
         self.gui_words.close()
 
     def clear_painting_message(self):
@@ -256,7 +286,13 @@ class player(QtCore.QObject):
 
         Sends a message to the server to clear the drawing canvas.
         """
-        client_socket.send(encrypt("Clear painting"))
+        try:
+            client_socket.send(encrypt("Clear painting"))
+        except ConnectionResetError as cre:
+            self.gui_game.close()
+            self.gui_server_shut_down = g.ServerShutDown()
+            self.gui_server_shut_down.show()
+            self.gui_server_shut_down.windowClosed.connect(quit)
 
     def send_finish(self):
         """
@@ -291,19 +327,24 @@ class player(QtCore.QObject):
 
         Sends a message to the server to start another round of the game.
         """
-        client_socket.send(encrypt("Finish current results"))
-        self.game_word = ""
-        self.players_order = []
-        self.is_thread_running = True
-        self.already_close_game = False
-        is_last_round = decrypt(client_socket.recv(1464))
-        client_socket.send(encrypt("thanks"))
-        if is_last_round == "The last player":
-            self.no_more_players()
-        elif is_last_round == "show the winner":
-            self.handle_winner_window()
-        else:
-            self.handle_game_window()
+        try:
+            client_socket.send(encrypt("Finish current results"))
+            self.game_word = ""
+            self.players_order = []
+            self.is_thread_running = True
+            self.already_close_game = False
+            is_last_round = decrypt(client_socket.recv(1464))
+            client_socket.send(encrypt("thanks"))
+            if is_last_round == "The last player":
+                self.no_more_players()
+            elif is_last_round == "show the winner":
+                self.handle_winner_window()
+            else:
+                self.handle_game_window()
+        except ConnectionResetError as cre:
+            self.gui_server_shut_down = g.ServerShutDown()
+            self.gui_server_shut_down.show()
+            self.gui_server_shut_down.windowClosed.connect(quit)
 
     def drawing_change(self):
         """
@@ -377,7 +418,10 @@ class player(QtCore.QObject):
         message = f"DRAWING|{start_x},{start_y}|{end_x},{end_y}|{width}|{color}|"
         message = message.ljust(1024)
         # Send the message to the server using your client_socket
-        client_socket.send(encrypt(message))
+        try:
+            client_socket.send(encrypt(message))
+        except ConnectionResetError as e:
+            pass
 
     def handle_messages(self, window):
         """
@@ -603,7 +647,12 @@ class player(QtCore.QObject):
         """
         self.event_number_players.set()  # Set the event to terminate the thread
         if self.number_of_players >= self.number_of_player_limits_to_start_the_game:
-            client_socket.send(encrypt("Timer finished"))
+            try:
+                client_socket.send(encrypt("Timer finished"))
+            except ConnectionResetError as cre:
+                self.gui_waiting_room.close()
+                self.gui_server_shut_down = g.ServerShutDown()
+                self.gui_server_shut_down.show()
             self.gui_waiting_room.close()
 
     def check_number_of_players(self):
@@ -632,7 +681,10 @@ class player(QtCore.QObject):
         """
         Send a message to the server that the client wants to quit while he is in the waiting room and disconnect.
         """
-        client_socket.send(encrypt("quit"))
+        try:
+            client_socket.send(encrypt("quit"))
+        except ConnectionResetError as cre:
+            quit()
         # client_socket.shutdown(socket.SHUT_RDWR)
         client_socket.close()
         # cl_socket.close()
@@ -648,10 +700,16 @@ class player(QtCore.QObject):
         """
         Send messages to chat
         """
-        client_socket.send(encrypt("message_chat: " + window.get_message()))
-        if window == self.gui_game:
-            if self.gui_game.timer_label.isVisible():
-                client_socket.send(encrypt((str(self.gui_game.timer_value))))
+        try:
+            client_socket.send(encrypt("message_chat: " + window.get_message()))
+            if window == self.gui_game:
+                if self.gui_game.timer_label.isVisible():
+                    client_socket.send(encrypt((str(self.gui_game.timer_value))))
+        except ConnectionResetError as cre:
+            # Handle the exception gracefully, inform the user, reconnect, or perform other actions as needed
+            window.close()
+            self.gui_server_shut_down = g.ServerShutDown()
+            self.gui_server_shut_down.show()
 
     def listen_for_server_messages(self):
         """
@@ -664,7 +722,6 @@ class player(QtCore.QObject):
                 with client_socket_lock:
                     data = decrypt(client_socket.recv(1464))
                     client_socket.send(encrypt("2 thanks"))
-                print(data)
                 if data == "You can now close the app":
                     self.close_first_window_signal.emit()  # Emit signal to close the app
                     self.open_waiting_room_signal.emit()  # Emit signal to open the waiting room window
@@ -678,7 +735,6 @@ class player(QtCore.QObject):
                 print(f"Error in listen_for_server_messages: {e}")
 
     def not_available_window(self):
-        print("gg")
         self.not_available_window_gui = g.NotAvailable()
         self.not_available_window_gui.show()
 
@@ -689,12 +745,15 @@ class player(QtCore.QObject):
         self.listening = False
         stay = self.gui_first_window.get_stay()
         if not stay:
-            client_socket.send(encrypt("quit"))
-            # client_socket.shutdown(socket.SHUT_RDWR)
-            client_socket.close()
-            # cl_socket.close()
-            self.close_first_window_signal.emit()
-            quit()
+            try:
+                client_socket.send(encrypt("quit"))
+                # client_socket.shutdown(socket.SHUT_RDWR)
+                client_socket.close()
+                # cl_socket.close()
+                self.close_first_window_signal.emit()
+                quit()
+            except ConnectionResetError as cre:
+                quit()
 
     def send_name(self):
         """
@@ -715,8 +774,11 @@ class player(QtCore.QObject):
                 else:
                     self.gui_first_window.lineEdit.setEnabled(False)
                     self.gui_first_window.SendButton.setEnabled(False)
-            except Exception as e:
-                print(f"Error sending name: {e}")
+            except ConnectionResetError as cre:
+                # Handle the exception gracefully, inform the user, reconnect, or perform other actions as needed
+                MainWindow.close()
+                self.gui_server_shut_down = g.ServerShutDown()
+                self.gui_server_shut_down.show()
 
     def send_monster(self):
         """
@@ -726,8 +788,11 @@ class player(QtCore.QObject):
         if self.monster:
             try:
                 client_socket.send(encrypt(("monster: " + str(self.monster))))
-            except Exception as e:
-                print(f"Error sending monster: {e}")
+            except ConnectionResetError as cre:
+                # Handle the exception gracefully, inform the user, reconnect, or perform other actions as needed
+                MainWindow.close()
+                self.gui_server_shut_down = g.ServerShutDown()
+                self.gui_server_shut_down.show()
 
 
 def open_port():

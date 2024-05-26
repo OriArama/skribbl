@@ -814,7 +814,6 @@ class CurrentResults(QMainWindow):
         self.close()
 
     def closeEvent(self, event):
-        print("Window closed. Emitting signal.")
         self.window_closed_signal.emit()
         super().closeEvent(event)
 
@@ -959,6 +958,44 @@ class NotAvailable(QDialog):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.close)  # Connect timer timeout signal to close method
         self.timer.start(5000)
+
+
+class ServerShutDown(QDialog):
+    # Define a custom signal
+    windowClosed = QtCore.pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowFlag(Qt.WindowType.WindowCloseButtonHint, False)  # Disable the close button (x button)
+        # Create a label with the message
+        self.message_label = QLabel("The server experienced an unplanned shutdown", self)
+
+        # Create a QFont object with the desired font size
+        font = QFont()
+        font.setPointSize(50)  # Set the font size to 14 points
+        font.setBold(True)  # Optionally, set the font to bold
+
+        # Apply the custom font to the label
+        self.message_label.setFont(font)
+        self.message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Set up the layout
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.message_label)
+        self.setLayout(layout)
+
+        # Adjust the window size to fit the label's preferred size
+        self.adjustSize()
+
+        # Create a timer to close the window after 10 seconds
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.close)  # Connect timer timeout signal to close method
+        self.timer.start(5000)
+
+    # Override closeEvent to emit the custom signal
+    def closeEvent(self, event):
+        self.windowClosed.emit()
+        super().closeEvent(event)
 
 
 def main_words():
