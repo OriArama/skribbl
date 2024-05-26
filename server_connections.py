@@ -30,6 +30,7 @@ number_of_players_that_guessed_correct = 0  # Number of players who guessed corr
 number_of_player_limits_to_start_the_game = 3  # Number of players required to start the game
 players_names = []  # List of players' names
 players_who_guessed_right = []  # List of players who guessed correctly
+what_stage_is_it = 0  # what stage in the code is the server
 
 event_restart_timer = threading.Event()  # Event for restarting the timer
 event_all_players_finish_timer = threading.Event()  # Event for when all players finish timer
@@ -62,6 +63,7 @@ def refresh():
     players_names = []
     players_who_guessed_right = []
     number_of_connected_clients = 0
+    what_stage_is_it = 0
 
     # Clear events
     event_restart_timer.clear()
@@ -134,13 +136,14 @@ def get_first_data(client_socket, client_address):
     global remaining_time
     global count_players_finish_timer
     global number_of_connected_clients
+    global what_stage_is_it
     # Create a new connection and cursor within the thread
     conn = sqlite3.connect('players.db')
     cursor = conn.cursor()
     name = ""
     monster = ""
     flag = False
-
+    what_stage_is_it = 1
     while True:  # Change to an infinite loop
         try:
             data = decrypt(client_socket.recv(1464))
@@ -161,7 +164,6 @@ def get_first_data(client_socket, client_address):
                 else:
                     client_socket.send(encrypt("ok"))
                     client_socket.recv(1464)
-
             elif data.startswith("monster: "):
                 monster = data[9:]
             elif data == "quit":
@@ -169,16 +171,23 @@ def get_first_data(client_socket, client_address):
                 number_of_connected_clients = number_of_connected_clients - 1
                 client_socket.close()
                 break  # If the client sends a "quit" message, break out of the loop
+            if name != "" and monster != "":
+                if remaining_time == 0:
+                    client_socket.send(encrypt("not available"))
+                    client_socket.recv(1464)
+                    client_socket.close()
+                    break
+                flag = True
+                client_socket.send(encrypt("You can now close the app"))  # Send the close message
+                client_socket.recv(1464)
+                break  # If name and monster data are received, break out of the loop
         except Exception as e:
             print(f"An error occurred: {e}")
-
-        if name != "" and monster != "":
-            flag = True
-            client_socket.send(encrypt("You can now close the app"))  # Send the close message
-            client_socket.recv(1464)
-            break  # If name and monster data are received, break out of the loop
-
+            number_of_connected_clients = number_of_connected_clients - 1
+            client_socket.close()
+            break
     if flag:
+        what_stage_is_it = 2
         cursor.execute("INSERT INTO players (ip_address, port, name, character, points) VALUES (?, ?, ?, ?, 0)", (
             client_address[0], client_address[1], name, monster))
         conn.commit()
@@ -202,9 +211,14 @@ def get_first_data(client_socket, client_address):
             else:
                 client_socket.send(encrypt(f"Timer, {str(remaining_time)}"))
         conn.close()
-        thread2 = threading.Thread(target=get_messages, args=(client_socket,))
-        thread2.start()
-        thread2.join()
+        try:
+            get_messages(client_socket)
+        except Exception as e:
+            print(e)
+            message_to_send = f"remove ,{name},{monster}"
+            send_message_to_all_clients(message_to_send, client_socket)
+            remove_player_when_timer(client_socket)
+            client_socket.close()
         event_all_players_finish_timer.wait()
         start_game()
 
@@ -234,6 +248,7 @@ def start_game():
     global players_names
     global finish_game_thread_event
     global is_game_available
+    global what_stage_is_it
     if start_game_function_call_count == 0:
         start_game_function_call_count = 1
     else:
@@ -246,6 +261,7 @@ def start_game():
     players_names = cursor.fetchall()
     for i in range(2):
         for name in players_names:
+            what_stage_is_it = 3
             if i == 1 and name == players_names[len(players_names) - 1]:
                 last_round = True
             thread3 = None
@@ -316,20 +332,47 @@ def get_messages(client_socket):
     global number_of_players_that_guessed_correct
     global finish_game_thread_event
     global players_who_guessed_right
+    global what_stage_is_it
+
+    conn = sqlite3.connect('players.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM players WHERE ip_address = ? AND port = ?;",
+                   (client_socket.getpeername()[0], client_socket.getpeername()[1]))
+    name = cursor.fetchone()[0]
+    cursor.execute("SELECT character FROM players WHERE ip_address = ? AND port = ?;",
+                   (client_socket.getpeername()[0], client_socket.getpeername()[1]))
+    monster = cursor.fetchone()[0]
     while True:
         try:
             message = decrypt(client_socket.recv(1464))
-        except:
+        except Exception as e:
+            if what_stage_is_it == 2:
+                raise
+            elif what_stage_is_it == 3 and client_socket in connected_players:
+                if client_socket == connected_players[0]:
+                    remove_player_when_game(client_socket)
+                    send_message_to_all_clients("Finish game round", client_socket)
+                    client_socket.close()
+                    break
+                else:
+                    remove_player_when_game(client_socket)
+                    client_socket.close()
+                    if len(players_names) == 1:
+                        send_message_to_all_clients("Finish game round", client_socket)
+                    elif number_of_players_that_guessed_correct == len(connected_players) - 1:
+                        if client_socket in players_who_guessed_right:
+                            send_message_to_all_clients(f"Left, {name} left", client_socket)
+                            number_of_players_that_guessed_correct = number_of_players_that_guessed_correct - 1
+                            players_who_guessed_right.remove(client_socket)
+                        else:
+                            send_message_to_all_clients("Finish game round", client_socket)
+                    else:
+                        send_message_to_all_clients(f"Left, {name} left", client_socket)
+            elif what_stage_is_it == 4:
+                remove_player_when_game(client_socket)
+                break
             finish_game_thread_event.wait()
             break
-        conn = sqlite3.connect('players.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM players WHERE ip_address = ? AND port = ?;",
-                       (client_socket.getpeername()[0], client_socket.getpeername()[1]))
-        name = cursor.fetchone()[0]
-        cursor.execute("SELECT character FROM players WHERE ip_address = ? AND port = ?;",
-                       (client_socket.getpeername()[0], client_socket.getpeername()[1]))
-        monster = cursor.fetchone()[0]
         if message.startswith("message_chat: "):
             message = message[14:]
             if chosen_word != "":
@@ -391,6 +434,8 @@ def get_messages(client_socket):
                 client_socket.recv(1464)
             client_socket.send(encrypt("stop"))
             client_socket.recv(1464)
+            what_stage_is_it = 4
+
         elif message == "Finish current results":
             chosen_word = ""
             number_of_players_that_guessed_correct = 0
@@ -453,7 +498,7 @@ def remove_player_when_game(client_socket):
         cursor.execute("DELETE FROM players WHERE ip_address = ? AND port = ?;",
                        (client_socket.getpeername()[0], client_socket.getpeername()[1]))
         connected_players.remove(client_socket)
-        number_of_connected_clients = number_of_connected_clients-1
+        number_of_connected_clients = number_of_connected_clients - 1
         conn.commit()
         conn.close()
     except Exception as e:
@@ -474,7 +519,7 @@ def remove_player_when_timer(client_socket):
         cursor.execute("DELETE FROM players WHERE ip_address = ? AND port = ?;",
                        (client_socket.getpeername()[0], client_socket.getpeername()[1]))
         connected_players.remove(client_socket)
-        number_of_connected_clients = number_of_connected_clients-1
+        number_of_connected_clients = number_of_connected_clients - 1
         if len(connected_players) < number_of_player_limits_to_start_the_game and timer_started is True:
             event_restart_timer.set()
         conn.commit()
@@ -595,7 +640,7 @@ if __name__ == "__main__":
             print("Waiting for a client to connect...")
             client_socket, client_address = server_socket.accept()
             print("Client connected from {}:{}".format(client_address[0], client_address[1]))
-            number_of_connected_clients = number_of_connected_clients+1
+            number_of_connected_clients = number_of_connected_clients + 1
             # Send the encrypted shared symmetric key to the client
             client_public_key_pem = client_socket.recv(4096)
             client_public_key = serialization.load_pem_public_key(client_public_key_pem)

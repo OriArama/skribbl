@@ -23,6 +23,7 @@ app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()
 client_socket_lock = threading.Lock()
 
+
 def encrypt(data):
     """Encrypt data using Fernet cipher suite."""
     encrypted_data = cipher_suite.encrypt(data.encode('utf-8'))
@@ -44,15 +45,18 @@ class player(QtCore.QObject):
     turn_on_timer_signal = QtCore.pyqtSignal()  # Signal to turn on the timer.
     close_timer_signal = QtCore.pyqtSignal()  # Signal to close the timer.
     open_game_signal = QtCore.pyqtSignal()  # Signal to open the game window.
-    update_drawing_signal = QtCore.pyqtSignal(float, float, float, float, int, str)  # Signal to update drawing on the GUI.
+    update_drawing_signal = QtCore.pyqtSignal(float, float, float, float, int,
+                                              str)  # Signal to update drawing on the GUI.
     clear_painting_signal = QtCore.pyqtSignal()  # Signal to clear the drawing on the GUI.
     start_game_timer_signal = QtCore.pyqtSignal()  # Signal to start the game timer.
     close_game_signal = QtCore.pyqtSignal(object)  # Signal to close the game.
+    open_not_available_window_signal = QtCore.pyqtSignal()
     number_of_players = 0
     game_word = ""
     players_order = []
     number_of_player_limits_to_start_the_game = 3
     already_close_game = False
+    word_button_clicked = False
 
     def __init__(self):
         super().__init__()
@@ -153,6 +157,11 @@ class player(QtCore.QObject):
             self.gui_game.chat_send_button.hide()
             self.gui_game.trash_button.clicked.connect(self.clear_painting_message)
             self.gui_game.disconnect_button.clicked.connect(self.drawer_disconnected)
+            if not self.word_button_clicked:
+                client_socket.send(encrypt(' '))
+                self.drawer_disconnected()
+            else:
+                self.word_button_clicked = False
             thread4 = threading.Thread(target=self.drawing_change, daemon=True)
             thread4.start()
             self.gui_game.window_closed_signal.connect(lambda: self.close_game(self.gui_game))
@@ -237,6 +246,7 @@ class player(QtCore.QObject):
 
         Sends the chosen word to the server for the drawing round.
         """
+        self.word_button_clicked = True
         client_socket.send(encrypt(("Word," + word)))
         self.gui_words.close()
 
@@ -654,12 +664,23 @@ class player(QtCore.QObject):
                 with client_socket_lock:
                     data = decrypt(client_socket.recv(1464))
                     client_socket.send(encrypt("2 thanks"))
+                print(data)
                 if data == "You can now close the app":
                     self.close_first_window_signal.emit()  # Emit signal to close the app
                     self.open_waiting_room_signal.emit()  # Emit signal to open the waiting room window
                     break
+                elif data == "not available":
+                    client_socket.close()
+                    self.close_first_window_signal.emit()  # Emit signal to close the app
+                    self.open_not_available_window_signal.emit()
+                    break
             except Exception as e:
                 print(f"Error in listen_for_server_messages: {e}")
+
+    def not_available_window(self):
+        print("gg")
+        self.not_available_window_gui = g.NotAvailable()
+        self.not_available_window_gui.show()
 
     def disconnect_first_window(self):
         """
@@ -815,4 +836,5 @@ if __name__ == "__main__":
         new_player.clear_painting_signal.connect(new_player.clear_painting)
         new_player.start_game_timer_signal.connect(new_player.start_game_timer)
         new_player.close_game_signal.connect(new_player.close_game)
+        new_player.open_not_available_window_signal.connect(new_player.not_available_window)
     sys.exit(app.exec())
