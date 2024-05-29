@@ -18,6 +18,7 @@ from cryptography.fernet import Fernet
 number_of_connected_clients = 0  # Tracks the number of connected clients
 is_game_available = True  # Indicates if the game is available to join
 connected_players = []  # Stores sockets of connected players
+buffer_size = buffer_size  # 1024 bytes + 440 bytes of the cipher key
 
 start_game_function_call_count = 0  # Counter for the start_game function calls
 list_words = words.words  # List of words used in the game
@@ -146,7 +147,7 @@ def get_first_data(client_socket, client_address):
     what_stage_is_it = 1
     while True:  # Change to an infinite loop
         try:
-            data = decrypt(client_socket.recv(1464))
+            data = decrypt(client_socket.recv(buffer_size))
             if not data:
                 break  # If no data received, break out of the loop
             if data.startswith("name: "):
@@ -155,15 +156,15 @@ def get_first_data(client_socket, client_address):
                 result = cursor.fetchone()[0]
                 if result == 1:
                     client_socket.send(encrypt("already used"))
-                    client_socket.recv(1464)
+                    client_socket.recv(buffer_size)
                     name = ""
                 elif ',' in name:
                     client_socket.send(encrypt("invalid name"))
-                    client_socket.recv(1464)
+                    client_socket.recv(buffer_size)
                     name = ""
                 else:
                     client_socket.send(encrypt("ok"))
-                    client_socket.recv(1464)
+                    client_socket.recv(buffer_size)
             elif data.startswith("monster: "):
                 monster = data[9:]
             elif data == "quit":
@@ -173,12 +174,12 @@ def get_first_data(client_socket, client_address):
             if name != "" and monster != "":
                 if remaining_time == 0:
                     client_socket.send(encrypt("not available"))
-                    client_socket.recv(1464)
+                    client_socket.recv(buffer_size)
                     client_socket.close()
                     break
                 flag = True
                 client_socket.send(encrypt("You can now close the app"))  # Send the close message
-                client_socket.recv(1464)
+                client_socket.recv(buffer_size)
                 break  # If name and monster data are received, break out of the loop
         except Exception as e:
             number_of_connected_clients = number_of_connected_clients - 1
@@ -197,7 +198,7 @@ def get_first_data(client_socket, client_address):
         for name_from_table in names:
             client_socket.send(
                 encrypt(f"Player joins,{name_from_table[0]},{monsters[index][0]}"))
-            client_socket.recv(1464)
+            client_socket.recv(buffer_size)
             index = index + 1
         send_message_to_all_clients(f"Player joins,{name},{monster}", client_socket)
         connected_players.append(client_socket)
@@ -267,7 +268,7 @@ def start_game():
                 if index == 0:
                     message = "You are the drawer"
                     connected_players[index].send(encrypt(message))
-                    connected_players[index].recv(1464)
+                    connected_players[index].recv(buffer_size)
                     random_elements = random.sample(list_words, 3)
                     connected_players[index].send(
                         encrypt(f"Words,{random_elements[0]},{random_elements[1]},{random_elements[2]}"))
@@ -276,11 +277,11 @@ def start_game():
                 else:
                     message = "You are a guesser"
                     connected_players[index].send(encrypt(message))
-                    connected_players[index].recv(1464)
+                    connected_players[index].recv(buffer_size)
                     thread3 = threading.Thread(target=get_messages, args=(connected_players[index],))
                     message = f"{name[0]} is drawing"
                     connected_players[index].send(encrypt(message))
-                    connected_players[index].recv(1464).decode("utf-8")
+                    connected_players[index].recv(buffer_size).decode("utf-8")
                     thread3.start()
             thread3.join()
             if finish_game_thread_event.is_set():
@@ -291,12 +292,12 @@ def start_game():
             if not last_round:
                 for j in range(len(connected_players)):
                     connected_players[j].send(encrypt("continue"))
-                    connected_players[j].recv(1464)
+                    connected_players[j].recv(buffer_size)
         if len(players_names) == 1:
             break
     if len(players_names) == 1:
         connected_players[0].send(encrypt("The last player"))
-        connected_players[0].recv(1464)
+        connected_players[0].recv(buffer_size)
 
     else:
         cursor.execute('''
@@ -308,9 +309,9 @@ def start_game():
         winner = cursor.fetchone()
         for j in range(len(connected_players)):
             connected_players[j].send(encrypt("show the winner"))
-            connected_players[j].recv(1464)
+            connected_players[j].recv(buffer_size)
             connected_players[j].send(encrypt(winner[0]))
-            connected_players[j].recv(1464)
+            connected_players[j].recv(buffer_size)
 
     conn.close()
     refresh()
@@ -341,7 +342,7 @@ def get_messages(client_socket):
     monster = cursor.fetchone()[0]
     while True:
         try:
-            message = decrypt(client_socket.recv(1464))
+            message = decrypt(client_socket.recv(buffer_size))
         except Exception as e:
             if what_stage_is_it == 2:
                 raise
@@ -373,7 +374,7 @@ def get_messages(client_socket):
         if message.startswith("message_chat: "):
             message = message[14:]
             if chosen_word != "":
-                guessed_time_encrypted = client_socket.recv(1464)
+                guessed_time_encrypted = client_socket.recv(buffer_size)
                 guessed_time = int(decrypt(guessed_time_encrypted))
                 if message.upper() == chosen_word.upper():
                     send_message_to_all_clients(f"Solve,{name},{monster},guessed the word", "")
@@ -402,7 +403,7 @@ def get_messages(client_socket):
             break
         elif message.startswith("Timer finished"):
             client_socket.send(encrypt("Close app"))
-            client_socket.recv(1464).decode("utf-8")
+            client_socket.recv(buffer_size).decode("utf-8")
             count_players_finish_timer = count_players_finish_timer + 1
             if count_players_finish_timer == len(connected_players):
                 event_all_players_finish_timer.set()
@@ -415,7 +416,7 @@ def get_messages(client_socket):
             send_message_to_all_clients("Start Timer game", "")
         elif message.startswith("Game round finish"):
             client_socket.send(encrypt("Game word: " + chosen_word))
-            client_socket.recv(1464)
+            client_socket.recv(buffer_size)
 
             cursor.execute('''
             SELECT name, character, points
@@ -428,9 +429,9 @@ def get_messages(client_socket):
                 name, character, points = row
                 client_socket.send(
                     encrypt(f"{character},{name},{points}"))
-                client_socket.recv(1464)
+                client_socket.recv(buffer_size)
             client_socket.send(encrypt("stop"))
-            client_socket.recv(1464)
+            client_socket.recv(buffer_size)
             what_stage_is_it = 4
 
         elif message == "Finish current results":
@@ -646,11 +647,11 @@ if __name__ == "__main__":
 
             if not is_game_available:
                 client_socket.send(encrypt("Not available"))
-                client_socket.recv(1464)
+                client_socket.recv(buffer_size)
                 client_socket.close()
             else:
                 client_socket.send(encrypt("Available"))
-                client_socket.recv(1464)
+                client_socket.recv(buffer_size)
 
                 # Handle initial data for the client in a separate thread
                 thread1 = threading.Thread(target=get_first_data, args=(client_socket, client_address), daemon=True)
