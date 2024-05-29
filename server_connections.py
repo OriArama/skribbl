@@ -18,7 +18,7 @@ from cryptography.fernet import Fernet
 number_of_connected_clients = 0  # Tracks the number of connected clients
 is_game_available = True  # Indicates if the game is available to join
 connected_players = []  # Stores sockets of connected players
-buffer_size = buffer_size  # 1024 bytes + 440 bytes of the cipher key
+buffer_size = 1464  # 1024 bytes + 440 bytes of the cipher key
 
 start_game_function_call_count = 0  # Counter for the start_game function calls
 list_words = words.words  # List of words used in the game
