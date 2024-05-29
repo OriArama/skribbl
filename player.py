@@ -22,6 +22,7 @@ from cryptography.fernet import Fernet
 app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()
 client_socket_lock = threading.Lock()
+buffer_size = 1464  # 1024 bytes + 440 bytes of the cipher key
 
 
 def encrypt(data):
@@ -139,7 +140,7 @@ class player(QtCore.QObject):
         """
         drawer = ""
         try:
-            message = decrypt(client_socket.recv(1464))
+            message = decrypt(client_socket.recv(buffer_size))
             client_socket.send(encrypt("thanks"))
         except ConnectionResetError as cre:
             self.gui_server_shut_down = g.ServerShutDown()
@@ -147,7 +148,7 @@ class player(QtCore.QObject):
             self.gui_server_shut_down.windowClosed.connect(quit)
         if message == "You are the drawer":
             try:
-                words_message = decrypt(client_socket.recv(1464))
+                words_message = decrypt(client_socket.recv(buffer_size))
                 client_socket.send(encrypt("thanks"))
             except ConnectionResetError as cre:
                 self.gui_server_shut_down = g.ServerShutDown()
@@ -179,7 +180,7 @@ class player(QtCore.QObject):
             self.gui_game.window_closed_signal.connect(lambda: self.close_game(self.gui_game))
         elif message == "You are a guesser":
             try:
-                drawer = decrypt(client_socket.recv(1464))
+                drawer = decrypt(client_socket.recv(buffer_size))
                 client_socket.send(encrypt("thanks"))
             except ConnectionResetError as cre:
                 self.gui_server_shut_down = g.ServerShutDown()
@@ -209,7 +210,7 @@ class player(QtCore.QObject):
 
         Displays the winner of the game in a separate window.
         """
-        winner = decrypt(client_socket.recv(1464))
+        winner = decrypt(client_socket.recv(buffer_size))
         client_socket.send(encrypt("thanks".ljust(1024)))
         self.gui_winner = g.WinnerWindow(winner)
         self.gui_winner.show()
@@ -333,7 +334,7 @@ class player(QtCore.QObject):
             self.players_order = []
             self.is_thread_running = True
             self.already_close_game = False
-            is_last_round = decrypt(client_socket.recv(1464))
+            is_last_round = decrypt(client_socket.recv(buffer_size))
             client_socket.send(encrypt("thanks"))
             if is_last_round == "The last player":
                 self.no_more_players()
@@ -434,7 +435,7 @@ class player(QtCore.QObject):
         """
         while True:
             try:
-                data = decrypt(client_socket.recv(1464))
+                data = decrypt(client_socket.recv(buffer_size))
             except:
                 break
             client_socket.send(encrypt("thanks".ljust(1024)))
@@ -518,13 +519,13 @@ class player(QtCore.QObject):
                 self.start_game_timer_signal.emit()
             elif data.startswith("Game word: "):
                 self.game_word = data[11:]
-                message = decrypt(client_socket.recv(1464))
+                message = decrypt(client_socket.recv(buffer_size))
                 self.number_of_players = 0
                 while message != "stop":
                     self.players_order.append(message)
                     self.number_of_players = self.number_of_players + 1
                     client_socket.send(encrypt("thanks"))
-                    message = decrypt(client_socket.recv(1464))
+                    message = decrypt(client_socket.recv(buffer_size))
                 client_socket.send(encrypt("thanks"))
                 break
             elif data == "Finish game round":
@@ -720,7 +721,7 @@ class player(QtCore.QObject):
             try:
                 data = None
                 with client_socket_lock:
-                    data = decrypt(client_socket.recv(1464))
+                    data = decrypt(client_socket.recv(buffer_size))
                     client_socket.send(encrypt("2 thanks"))
                 if data == "You can now close the app":
                     self.close_first_window_signal.emit()  # Emit signal to close the app
@@ -763,7 +764,7 @@ class player(QtCore.QObject):
         if self.name:
             try:
                 client_socket.send(encrypt(("name: " + self.name)))
-                message = decrypt(client_socket.recv(1464))
+                message = decrypt(client_socket.recv(buffer_size))
                 client_socket.send(encrypt("1 thanks"))
                 if message == "already used":
                     self.gui_first_window.lineEdit.clear()
@@ -878,7 +879,7 @@ if __name__ == "__main__":
     # Create cipher suite with the received symmetric key
     cipher_suite = Fernet(shared_key)
 
-    is_available = decrypt(client_socket.recv(1464))
+    is_available = decrypt(client_socket.recv(buffer_size))
     if is_available == "Not available":
         client_socket.send(encrypt("thanks"))
         client_socket.close()
