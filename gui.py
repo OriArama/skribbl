@@ -19,8 +19,6 @@ class ui_first_window(object):
 
     def setUpUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        icon_main_window = QIcon(os.path.join(os.getcwd(), 'skribbl_photo.jpg'))
-        MainWindow.setWindowIcon(icon_main_window)
         self.centralwidget = QWidget(parent=MainWindow)
         self.centralwidget.setObjectName("centralwidget")
 
@@ -65,7 +63,7 @@ class ui_first_window(object):
         self.SendButton = QPushButton(self.centralwidget)
         self.SendButton.setGeometry(500, 120, 40, 40)
         central_layout.addWidget(self.SendButton)
-        icon_send = QIcon(os.path.join(os.getcwd(), 'send_photo.jpg'))
+        icon_send = QIcon(os.path.join(os.getcwd(), 'images\send_photo.jpg'))
         self.SendButton.setIcon(icon_send)
         self.SendButton.setIconSize(icon_send.actualSize(self.SendButton.size()))
         self.SendButton.setObjectName("SendButton")
@@ -97,7 +95,7 @@ class ui_first_window(object):
         self.MonsterButton_1 = QPushButton(self.centralwidget)
         self.MonsterButton_1.setGeometry(250, y_position, button_width, button_height)
         button_layout.addWidget(self.MonsterButton_1)
-        icon_Monster1 = QIcon(os.path.join(os.getcwd(), 'monster_1.png'))
+        icon_Monster1 = QIcon(os.path.join(os.getcwd(), 'images\monster_1.png'))
         self.MonsterButton_1.setIcon(icon_Monster1)
         self.MonsterButton_1.setIconSize(icon_Monster1.actualSize(self.MonsterButton_1.size()))
         self.MonsterButton_1.setObjectName("MonsterButton_1")
@@ -107,7 +105,7 @@ class ui_first_window(object):
         self.MonsterButton_2 = QPushButton(self.centralwidget)
         self.MonsterButton_2.setGeometry(360, y_position, button_width, button_height)
         button_layout.addWidget(self.MonsterButton_2)
-        icon_Monster2 = QIcon(os.path.join(os.getcwd(), 'monster_2.png'))
+        icon_Monster2 = QIcon(os.path.join(os.getcwd(), 'images\monster_2.png'))
         self.MonsterButton_2.setIcon(icon_Monster2)
         self.MonsterButton_2.setIconSize(icon_Monster2.actualSize(self.MonsterButton_2.size()))
         self.MonsterButton_2.setObjectName("MonsterButton_2")
@@ -117,7 +115,7 @@ class ui_first_window(object):
         self.MonsterButton_3 = QPushButton(self.centralwidget)
         self.MonsterButton_3.setGeometry(470, y_position, button_width, button_height)
         button_layout.addWidget(self.MonsterButton_3)
-        icon_Monster3 = QIcon(os.path.join(os.getcwd(), 'monster_3.png'))
+        icon_Monster3 = QIcon(os.path.join(os.getcwd(), 'images\monster_3.png'))
         self.MonsterButton_3.setIcon(icon_Monster3)
         self.MonsterButton_3.setIconSize(icon_Monster3.actualSize(self.MonsterButton_3.size()))
         self.MonsterButton_3.setObjectName("MonsterButton_3")
@@ -134,7 +132,7 @@ class ui_first_window(object):
         self.MonsterButton_4 = QPushButton(self.centralwidget)
         button_layout2.addWidget(self.MonsterButton_4)
         self.MonsterButton_4.setGeometry(250, y_position2, button_width, button_height)
-        icon_Monster4 = QIcon(os.path.join(os.getcwd(), 'monster_4.png'))
+        icon_Monster4 = QIcon(os.path.join(os.getcwd(), 'images\monster_4.png'))
         self.MonsterButton_4.setIcon(icon_Monster4)
         self.MonsterButton_4.setIconSize(icon_Monster4.actualSize(self.MonsterButton_4.size()))
         self.MonsterButton_4.setObjectName("MonsterButton_4")
@@ -144,7 +142,7 @@ class ui_first_window(object):
         self.MonsterButton_5 = QPushButton(self.centralwidget)
         button_layout2.addWidget(self.MonsterButton_5)
         self.MonsterButton_5.setGeometry(360, y_position2, button_width, button_height)
-        icon_Monster5 = QIcon(os.path.join(os.getcwd(), 'monster_5.png'))
+        icon_Monster5 = QIcon(os.path.join(os.getcwd(), 'images\monster_5.png'))
         self.MonsterButton_5.setIcon(icon_Monster5)
         self.MonsterButton_5.setIconSize(icon_Monster5.actualSize(self.MonsterButton_5.size()))
         self.MonsterButton_5.setObjectName("MonsterButton_5")
@@ -154,7 +152,7 @@ class ui_first_window(object):
         self.MonsterButton_6 = QPushButton(self.centralwidget)
         button_layout2.addWidget(self.MonsterButton_6)
         self.MonsterButton_6.setGeometry(470, y_position2, button_width, button_height)
-        icon_Monster6 = QIcon(os.path.join(os.getcwd(), 'monster_6.png'))
+        icon_Monster6 = QIcon(os.path.join(os.getcwd(), 'images\monster_6.png'))
         self.MonsterButton_6.setIcon(icon_Monster6)
         self.MonsterButton_6.setIconSize(icon_Monster6.actualSize(self.MonsterButton_6.size()))
         self.MonsterButton_6.setObjectName("MonsterButton_6")
@@ -846,7 +844,7 @@ class GameOverWindow(QMainWindow):
         self.game_over_sound()
 
     def game_over_sound(self):
-        filename = "game_over.wav"
+        filename = "music\game_over.wav"
         self.player = QMediaPlayer()
         self.audio_output = QAudioOutput()
         self.player.setAudioOutput(self.audio_output)
@@ -869,7 +867,7 @@ class WinnerWindow(QWidget):
         self.setWindowTitle("Winner Window")
 
         # Load the image
-        pixmap = QPixmap("winner.jpg")
+        pixmap = QPixmap("images\winner.jpg")
         if pixmap.isNull():
             print("Error loading image!")
             sys.exit(1)
@@ -912,7 +910,7 @@ class WinnerWindow(QWidget):
         self.move(center_point - self.rect().center())
 
     def win_sound(self):
-        filename = "win_sound.wav"
+        filename = "music\win_sound.wav"
         self.player = QMediaPlayer()
         self.audio_output = QAudioOutput()
         self.player.setAudioOutput(self.audio_output)

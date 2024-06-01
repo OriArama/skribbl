@@ -313,7 +313,7 @@ class player(QtCore.QObject):
         self.gui_current_results = g.CurrentResults(self.game_word, self.number_of_players)
         for i in range(self.number_of_players):
             row = self.players_order[i].split(",")
-            html_content = f"<img src='file://{os.path.join(os.getcwd(), 'monster_' + row[0] + '.png')}' height='30' width='30'>"
+            html_content = f"<img src='file://{os.path.join(os.getcwd(), 'images', 'monster_' + row[0] + '.png')}' height='30' width='30'>"
             text_content = f"{self.gui_current_results.row_label[i].text()} {html_content} {row[1]} {row[2]} points"
 
             # Set text format to RichText and set HTML content
@@ -447,7 +447,7 @@ class player(QtCore.QObject):
                 # Set the desired font size (change 16 to your preferred size)
                 font_size = "30px"
                 # Create HTML content for displaying the monster image and player's name
-                html_content = f"<img src='file://{os.path.join(os.getcwd(), 'monster_' + monster + '.png')}' height='30' width='30'>"
+                html_content = f"<img src='file://{os.path.join(os.getcwd(), 'images', 'monster_' + monster + '.png')}' height='30' width='30'>"
                 html_content += f"<span style='font-size: {font_size}'>{name}</span><br>"
                 # Append the HTML content to the players_names QTextEdit
                 self.update_gui_players_names_signal.emit(html_content, window)
@@ -469,7 +469,7 @@ class player(QtCore.QObject):
                 for part in parts[i:]:
                     text = text + part + " "
                 font_size = "15px"
-                html_content = f"<img src='file://{os.path.join(os.getcwd(), 'monster_' + monster + '.png')}' height='15' width='15'>"
+                html_content = f"<img src='file://{os.path.join(os.getcwd(), 'images', 'monster_' + monster + '.png')}' height='15' width='15'>"
                 html_content += f"<span style='font-size: {font_size}'>{name + text}</span><br>"
                 self.update_gui_chat_text_signal.emit(html_content, window, None)
             elif data.startswith("remove "):
@@ -511,7 +511,7 @@ class player(QtCore.QObject):
                     monster = parts[2]
                     text = parts[3]
                     font_size = "15px"
-                    html_content = f"<img src='file://{os.path.join(os.getcwd(), 'monster_' + monster + '.png')}' height='15' width='15'>"
+                    html_content = f"<img src='file://{os.path.join(os.getcwd(), 'images', 'monster_' + monster + '.png')}' height='15' width='15'>"
                     html_content += f"<span style='font-size: {font_size}; color: green;'>{name + text}</span><br>"
                     state = "enable"
                 self.update_gui_chat_text_signal.emit(html_content, window, state)
